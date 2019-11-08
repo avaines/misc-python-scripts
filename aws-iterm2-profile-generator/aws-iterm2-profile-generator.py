@@ -55,7 +55,6 @@ def getEC2Instances():
 
                     # Now the tags have all been processed, find the instance ID and the private IP which are root items in the Instance object
                     instance_id = instance['InstanceId']
-                    instance_ip = instance['PrivateIpAddress']
 
                     # If there is an override for the key name, apply it
                     if name in key_overrides:
@@ -82,7 +81,8 @@ def getEC2Instances():
                         'application':application,
                         'keyname':keyname,
                         'username':username,
-                        'privateip':instance_ip
+                        'privateip':instance['PrivateIpAddress'],
+                        'privatednsname':instance['PrivateDnsName']
                     }
 
                     
@@ -90,7 +90,7 @@ def getEC2Instances():
 
 
 def update_iterm(instances):
-    
+    instance_names = []
     handle = open(str(Path.home()) + "/Library/Application Support/iTerm2/DynamicProfiles/aws", 'wt+')
 
     profiles = []
@@ -98,6 +98,13 @@ def update_iterm(instances):
     for instance_i in instances:
         instance = instances[instance_i]
         
+        if instance['name'] in instance_names:
+            print(instance['name'] + " looks to be a duplicate, renaming as " + instance['name'] + '_' + instance_i) 
+            instance['name'] = instance['name'] + "_" + instance_i
+
+
+        instance_names.append(instance['name'])
+
         profile = {
                 "Name":instance['name'],
                 "Guid":instance['name'],
@@ -116,19 +123,28 @@ def update_iterm(instances):
 
 
 def update_sshconfig(instances):
+    instance_names = []
 
     handle = open(keypath + "config_aws", 'wt+')
     profiles = ""     
 
     for instance_i in instances:
         instance = instances[instance_i]
-        
-        profile = """Host {name}
+
+        if instance['name'] in instance_names:
+            print(instance['name'] + " looks to be a duplicate, renaming as " + instance['name'] + '_' + instance_i) 
+            instance['name'] = instance['name'] + "_" + instance_i
+
+
+        instance_names.append(instance['name'])
+
+        profile = """Host {name} {privatedns}
     Hostname {ip}
     IdentityFile {keyfile}
     user {user}
     \n""".format(
             name=instance['name'],
+            privatedns=instance['privatednsname'],
             ip=instance['privateip'],
             keyfile=keypath + instance['keyname'],
             user=instance['username']
