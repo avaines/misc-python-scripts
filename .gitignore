@@ -1,0 +1,8 @@
+#vscode
+.vscode
+
+#Mac
+.DS_Store
+
+# Adding excludes to the ignore file
+aws-iterm2-profile-generator/excludes.py
