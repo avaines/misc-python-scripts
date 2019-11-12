@@ -147,7 +147,7 @@ def update_sshconfig(instances):
 
         profile = """Host "{name}" {privatedns}
     Hostname {ip}
-    IdentityFile {keyfile}
+    IdentityFile "{keyfile}"
     user {user}
     \n""".format(
             name=instance['name'],
