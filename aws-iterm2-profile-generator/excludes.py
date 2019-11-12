@@ -7,3 +7,8 @@ key_overrides = {
 }
 
 iterm2_default_profile = "Default"
+
+exclude_instances = {
+    "i-000000",
+    "i-000001"
+}
