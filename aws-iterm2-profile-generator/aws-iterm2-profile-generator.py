@@ -21,7 +21,7 @@ import json
 import argparse
 from pathlib import Path
 from os import path
-from excludes import username_overrides, key_overrides, iterm2_default_profile
+from excludes import username_overrides, key_overrides, iterm2_default_profile, exclude_instances
 
 def getEC2Instances():
     # Create a dictionary for the instances
@@ -48,56 +48,59 @@ def getEC2Instances():
         for reservation in response['Reservations']:
                 for instance in reservation['Instances']:
 
-                        # Loop throught the tags object and find the ones we are interested in, to add more tags do it here
-                        for tag in instance['Tags']:
-                                if tag['Key'] == 'Name':
-                                        name = tag['Value']
+                    # Find the instance ID
+                    instance_id = instance['InstanceId']
 
-                                if tag['Key'] == 'Application':
-                                        application = tag['Value']
-                                        
-                                if tag['Key'] == 'Environment':
-                                        environment = tag['Value']
-                                        
+                    if instance_id in exclude_instances:
+                        print("\tSkipping instance" + instance_id)
+                        break
 
-                        # Now the tags have all been processed, find the instance ID and the private IP which are root items in the Instance object
-                        instance_id = instance['InstanceId']
+                    # Loop throught the tags object and find the ones we are interested in, to add more tags do it here
+                    for tag in instance['Tags']:
+                            if tag['Key'] == 'Name':
+                                    name = tag['Value']
 
-                        # If there is an override for the key name, apply it
-                        if name in key_overrides:
-                            keyname = key_overrides.get(name)
-                        else:
-                            keyname = instance['KeyName']
-                        
-                        # If there is an override for the username, apply it
-                        if name in username_overrides:
-                            username = username_overrides.get(name)
-                        else:
-                            username = 'ec2-user'
+                            if tag['Key'] == 'Application':
+                                    application = tag['Value']
+                                    
+                            if tag['Key'] == 'Environment':
+                                    environment = tag['Value']
 
-                        if name in instance_names:
-                            print("\t" + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id) 
-                            instance['name'] = name + "_" + instance_id
+                    # If there is an override for the key name, apply it
+                    if name in key_overrides:
+                        keyname = key_overrides.get(name)
+                    else:
+                        keyname = instance['KeyName']
+                    
+                    # If there is an override for the username, apply it
+                    if name in username_overrides:
+                        username = username_overrides.get(name)
+                    else:
+                        username = 'ec2-user'
 
-
-                        instance_names.append(name)
-
-                        # Check to see if the key exists
-                        if not path.exists(keypath + keyname):
-                            print("\tMissing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
+                    if name in instance_names:
+                        print("\t" + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id) 
+                        instance['name'] = name + "_" + instance_id
 
 
-                        # Add the instance to the instanses object using the following attributes
-                        instances[instance_id] = {
-                            'name':name,
-                            'environment':environment,
-                            'application':application,
-                            'keyname':keyname,
-                            'username':username,
-                            'region':region['RegionName'],
-                            'privateip':instance['PrivateIpAddress'],
-                            'privatednsname':instance['PrivateDnsName']
-                        }
+                    instance_names.append(name)
+
+                    # Check to see if the key exists
+                    if not path.exists(keypath + keyname):
+                        print("\tMissing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
+
+
+                    # Add the instance to the instanses object using the following attributes
+                    instances[instance_id] = {
+                        'name':name,
+                        'environment':environment,
+                        'application':application,
+                        'keyname':keyname,
+                        'username':username,
+                        'region':region['RegionName'],
+                        'privateip':instance['PrivateIpAddress'],
+                        'privatednsname':instance['PrivateDnsName']
+                    }
 
                     
     return instances
