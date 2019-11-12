@@ -42,7 +42,7 @@ def getEC2Instances():
                 ]
         )
 
-        print("Checking through the " + region['RegionName'] + " (" + str(len(response['Reservations'])) + ")")
+        print("Checking " + region['RegionName'] + " (" + str(len(response['Reservations'])) + ")")
 
         # for each insatnce in the reservation process the tags for the ones we expect.
         for reservation in response['Reservations']:
@@ -52,7 +52,7 @@ def getEC2Instances():
                     instance_id = instance['InstanceId']
 
                     if instance_id in exclude_instances:
-                        print("\tSkipping instance" + instance_id)
+                        print("\t[SKIP]Skipping instance " + instance_id)
                         break
 
                     # Loop throught the tags object and find the ones we are interested in, to add more tags do it here
@@ -79,15 +79,15 @@ def getEC2Instances():
                         username = 'ec2-user'
 
                     if name in instance_names:
-                        print("\t" + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id) 
-                        instance['name'] = name + "_" + instance_id
+                        print("\t[DUPLICATE]" + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id) 
+                        name = name + "_" + instance_id
 
 
                     instance_names.append(name)
 
                     # Check to see if the key exists
                     if not path.exists(keypath + keyname):
-                        print("\tMissing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
+                        print("\t[KEY]Missing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
 
 
                     # Add the instance to the instanses object using the following attributes
@@ -114,13 +114,6 @@ def update_iterm(instances):
 
     for instance_i in instances:
         instance = instances[instance_i]
-        
-        if instance['name'] in instance_names:
-            print(instance['name'] + " looks to be a duplicate, renaming as " + instance['name'] + '_' + instance_i) 
-            instance['name'] = instance['name'] + "_" + instance_i
-
-
-        instance_names.append(instance['name'])
 
         profile = {
                 "Name":instance['name'],
