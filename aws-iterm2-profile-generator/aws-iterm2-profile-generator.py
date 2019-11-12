@@ -24,66 +24,80 @@ from os import path
 from excludes import username_overrides, key_overrides, iterm2_default_profile
 
 def getEC2Instances():
-
-    # Create a client and filter for boto
-    client = boto3.client('ec2')
-
-    response = client.describe_instances(
-            Filters = [
-                {'Name':'instance-state-name', 'Values': ['running']}
-            ]
-    )
-
     # Create a dictionary for the instances
     instances = {}
+    instance_names = []
 
-    # for each insatnce in the reservation process the tags for the ones we expect.
-    for reservation in response['Reservations']:
-            for instance in reservation['Instances']:
+    # Create a client and filter for boto
+    reg_client = boto3.client('ec2')
+    reg_response = reg_client.describe_regions()
+   
+    for region in reg_response['Regions']:
+        # print("Checking through the " + region['RegionName'])
 
-                    # Loop throught the tags object and find the ones we are interested in, to add more tags do it here
-                    for tag in instance['Tags']:
-                            if tag['Key'] == 'Name':
-                                    name = tag['Value']
+        client = boto3.client('ec2',  region_name=region['RegionName'])
+        response = client.describe_instances(
+                Filters = [
+                    {'Name':'instance-state-name', 'Values': ['running']}
+                ]
+        )
 
-                            if tag['Key'] == 'Application':
-                                    application = tag['Value']
-                                    
-                            if tag['Key'] == 'Environment':
-                                    environment = tag['Value']
-                                    
+        print("Checking through the " + region['RegionName'] + " (" + str(len(response['Reservations'])) + ")")
 
-                    # Now the tags have all been processed, find the instance ID and the private IP which are root items in the Instance object
-                    instance_id = instance['InstanceId']
+        # for each insatnce in the reservation process the tags for the ones we expect.
+        for reservation in response['Reservations']:
+                for instance in reservation['Instances']:
 
-                    # If there is an override for the key name, apply it
-                    if name in key_overrides:
-                        keyname = key_overrides.get(name)
-                    else:
-                        keyname = instance['KeyName']
-                    
-                    # If there is an override for the username, apply it
-                    if name in username_overrides:
-                        username = username_overrides.get(name)
-                    else:
-                        username = 'ec2-user'
+                        # Loop throught the tags object and find the ones we are interested in, to add more tags do it here
+                        for tag in instance['Tags']:
+                                if tag['Key'] == 'Name':
+                                        name = tag['Value']
+
+                                if tag['Key'] == 'Application':
+                                        application = tag['Value']
+                                        
+                                if tag['Key'] == 'Environment':
+                                        environment = tag['Value']
+                                        
+
+                        # Now the tags have all been processed, find the instance ID and the private IP which are root items in the Instance object
+                        instance_id = instance['InstanceId']
+
+                        # If there is an override for the key name, apply it
+                        if name in key_overrides:
+                            keyname = key_overrides.get(name)
+                        else:
+                            keyname = instance['KeyName']
+                        
+                        # If there is an override for the username, apply it
+                        if name in username_overrides:
+                            username = username_overrides.get(name)
+                        else:
+                            username = 'ec2-user'
+
+                        if name in instance_names:
+                            print("\t" + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id) 
+                            instance['name'] = name + "_" + instance_id
 
 
-                    # Check to see if the key exists
-                    if not path.exists(keypath + keyname):
-                        print("Missing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
+                        instance_names.append(name)
+
+                        # Check to see if the key exists
+                        if not path.exists(keypath + keyname):
+                            print("\tMissing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
 
 
-                    # Add the instance to the instanses object using the following attributes
-                    instances[instance_id] = {
-                        'name':name,
-                        'environment':environment,
-                        'application':application,
-                        'keyname':keyname,
-                        'username':username,
-                        'privateip':instance['PrivateIpAddress'],
-                        'privatednsname':instance['PrivateDnsName']
-                    }
+                        # Add the instance to the instanses object using the following attributes
+                        instances[instance_id] = {
+                            'name':name,
+                            'environment':environment,
+                            'application':application,
+                            'keyname':keyname,
+                            'username':username,
+                            'region':region['RegionName'],
+                            'privateip':instance['PrivateIpAddress'],
+                            'privatednsname':instance['PrivateDnsName']
+                        }
 
                     
     return instances
@@ -109,7 +123,7 @@ def update_iterm(instances):
                 "Name":instance['name'],
                 "Guid":instance['name'],
                 "Badge Text":instance['environment'],
-                "Tags":["Dynamic/" + instance['environment'] + "/" + instance['application']],
+                "Tags":["Dynamic/" + instance['region'] + "/" + instance['environment'] + "/" + instance['application']],
                 "Dynamic Profile Parent Name": iterm2_default_profile,
                 "Custom Command" : "Yes",
                 "Command" : "ssh -oStrictHostKeyChecking=no -oUpdateHostKeys=yes " + instance['username'] + "@" + instance['privateip'] + " -i " + keypath + "/" + instance['keyname'] 
@@ -123,7 +137,7 @@ def update_iterm(instances):
 
 
 def update_sshconfig(instances):
-    instance_names = []
+    
 
     handle = open(keypath + "config_aws", 'wt+')
     profiles = ""     
@@ -131,14 +145,7 @@ def update_sshconfig(instances):
     for instance_i in instances:
         instance = instances[instance_i]
 
-        if instance['name'] in instance_names:
-            print(instance['name'] + " looks to be a duplicate, renaming as " + instance['name'] + '_' + instance_i) 
-            instance['name'] = instance['name'] + "_" + instance_i
-
-
-        instance_names.append(instance['name'])
-
-        profile = """Host {name} {privatedns}
+        profile = """Host "{name}" {privatedns}
     Hostname {ip}
     IdentityFile {keyfile}
     user {user}
