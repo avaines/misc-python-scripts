@@ -52,7 +52,7 @@ def getEC2Instances():
                     instance_id = instance['InstanceId']
 
                     if instance_id in exclude_instances:
-                        print("\t[SKIP]Skipping instance " + instance_id)
+                        print("\t\x1b[1;37;44m[SKIP]\x1b[0m Skipping instance " + instance_id)
                         break
 
                     # Loop throught the tags object and find the ones we are interested in, to add more tags do it here
@@ -79,7 +79,8 @@ def getEC2Instances():
                         username = 'ec2-user'
 
                     if name in instance_names:
-                        print("\t[DUPLICATE]" + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id) 
+                        print("\t\x1b[1;37;42m[DUPLICATE]\x1b[0m " + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id)
+                        
                         name = name + "_" + instance_id
 
 
@@ -87,7 +88,7 @@ def getEC2Instances():
 
                     # Check to see if the key exists
                     if not path.exists(keypath + keyname):
-                        print("\t[KEY]Missing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
+                        print("\t\x1b[1;37;41m[KEY]\x1b[0m Missing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
 
 
                     # Add the instance to the instanses object using the following attributes
