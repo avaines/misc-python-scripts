@@ -19,6 +19,7 @@ Troubleshooting
 import boto3
 import json
 import argparse
+import sys
 from pathlib import Path
 from os import path
 from excludes import username_overrides, key_overrides, iterm2_default_profile, exclude_instances
@@ -48,60 +49,67 @@ def getEC2Instances():
         for reservation in response['Reservations']:
                 for instance in reservation['Instances']:
 
-                    # Find the instance ID
-                    instance_id = instance['InstanceId']
-
-                    if instance_id in exclude_instances:
-                        print("\t\x1b[1;37;44m[SKIP]\x1b[0m Skipping instance " + instance_id)
-                        break
-
-                    # Loop throught the tags object and find the ones we are interested in, to add more tags do it here
-                    for tag in instance['Tags']:
-                            if tag['Key'] == 'Name':
-                                    name = tag['Value']
-
-                            if tag['Key'] == 'Application':
-                                    application = tag['Value']
-                                    
-                            if tag['Key'] == 'Environment':
-                                    environment = tag['Value']
-
-                    # If there is an override for the key name, apply it
-                    if name in key_overrides:
-                        keyname = key_overrides.get(name)
-                    else:
-                        keyname = instance['KeyName']
+                    try:
                     
-                    # If there is an override for the username, apply it
-                    if name in username_overrides:
-                        username = username_overrides.get(name)
-                    else:
-                        username = 'ec2-user'
-
-                    if name in instance_names:
-                        print("\t\x1b[1;37;42m[DUPLICATE]\x1b[0m " + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id)
                         
-                        name = name + "_" + instance_id
+                        # Find the instance ID
+                        instance_id = instance['InstanceId']
+
+                        if instance_id in exclude_instances:
+                            print("\t\x1b[1;37;44m[SKIP]\x1b[0m Skipping instance " + instance_id)
+                            break
+
+                        # Loop throught the tags object and find the ones we are interested in, to add more tags do it here
+                        for tag in instance['Tags']:
+                                if tag['Key'] == 'Name':
+                                        name = tag['Value']
+
+                                if tag['Key'] == 'Application':
+                                        application = tag['Value']
+                                        
+                                if tag['Key'] == 'Environment':
+                                        environment = tag['Value']
+
+                        # If there is an override for the key name, apply it
+                        if name in key_overrides:
+                            keyname = key_overrides.get(name)
+                        else:
+                           keyname = instance['KeyName']
+                        
+                        # If there is an override for the username, apply it
+                        if name in username_overrides:
+                            username = username_overrides.get(name)
+                        else:
+                            username = 'ec2-user'
+
+                        if name in instance_names:
+                            print("\t\x1b[1;37;42m[DUPLICATE]\x1b[0m " + name + " looks to be a duplicate, renaming as " + name + '_' + instance_id)
+                            
+                            name = name + "_" + instance_id
 
 
-                    instance_names.append(name)
+                        instance_names.append(name)
 
-                    # Check to see if the key exists
-                    if not path.exists(keypath + keyname):
-                        print("\t\x1b[1;37;41m[KEY]\x1b[0m Missing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
+                        # Check to see if the key exists
+                        if not path.exists(keypath + keyname):
+                            print("\t\x1b[1;37;41m[KEY]\x1b[0m Missing keyfile '" + keyname +"' the instance '" + name + "' seems to use it")
 
 
-                    # Add the instance to the instanses object using the following attributes
-                    instances[instance_id] = {
-                        'name':name,
-                        'environment':environment,
-                        'application':application,
-                        'keyname':keyname,
-                        'username':username,
-                        'region':region['RegionName'],
-                        'privateip':instance['PrivateIpAddress'],
-                        'privatednsname':instance['PrivateDnsName']
-                    }
+                        # Add the instance to the instanses object using the following attributes
+                        instances[instance_id] = {
+                            'name':name,
+                            'environment':environment,
+                            'application':application,
+                            'keyname':keyname,
+                            'username':username,
+                            'region':region['RegionName'],
+                            'privateip':instance['PrivateIpAddress'],
+                            'privatednsname':instance['PrivateDnsName']
+                        }
+
+                    except:
+                        e=sys.exc_info()[0]
+                        print("Error: %s" % e)
 
                     
     return instances
