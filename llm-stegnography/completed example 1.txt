@@ -1,0 +1,11 @@
+Prompt:
+"On rainy afternoons, my father would pull out his old record player and we'd listen to jazz music in the living room."
+
+Secret:
+"Aiden"
+
+Steganographic text:
+On rainy afternoons, my father would pull out his old record player and we'd listen to jazz music in the kitchen while my mom made dinner. I loved that music, and I still do. It's the music of the heart. It makes you want to
+
+Decoded message:
+Aiden

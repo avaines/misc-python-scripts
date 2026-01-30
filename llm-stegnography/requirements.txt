@@ -1,0 +1,6 @@
+dotenv
+ipywidgets
+jupyter
+torch
+tqdm
+transformers
