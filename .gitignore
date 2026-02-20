@@ -6,3 +6,4 @@
 
 # Adding excludes to the ignore file
 aws-iterm2-profile-generator/excludes.py
+**/.env
